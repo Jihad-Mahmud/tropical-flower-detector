@@ -1,0 +1,477 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>🌸 Tropical Flower Detector</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      min-height: 100vh;
+      background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: flex-start;
+      padding: 30px 16px 60px;
+    }
+
+    header {
+      text-align: center;
+      margin-bottom: 30px;
+    }
+    header h1 {
+      font-size: 2.4rem;
+      color: #fff;
+      letter-spacing: 1px;
+    }
+    header p {
+      color: #a0aec0;
+      margin-top: 6px;
+      font-size: 0.95rem;
+    }
+    .badge {
+      display: inline-block;
+      background: rgba(255,255,255,0.1);
+      border: 1px solid rgba(255,255,255,0.15);
+      color: #e2e8f0;
+      border-radius: 20px;
+      padding: 4px 14px;
+      font-size: 0.78rem;
+      margin-top: 10px;
+    }
+
+    .card {
+      background: rgba(255, 255, 255, 0.05);
+      backdrop-filter: blur(20px);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 24px;
+      padding: 36px;
+      width: 100%;
+      max-width: 520px;
+      box-shadow: 0 25px 50px rgba(0,0,0,0.4);
+    }
+
+    .upload-area {
+      border: 2px dashed rgba(236, 72, 153, 0.5);
+      border-radius: 16px;
+      padding: 36px 20px;
+      text-align: center;
+      cursor: pointer;
+      transition: all 0.25s ease;
+      background: rgba(236, 72, 153, 0.04);
+      position: relative;
+    }
+    .upload-area:hover,
+    .upload-area.dragover {
+      border-color: #ec4899;
+      background: rgba(236, 72, 153, 0.1);
+    }
+    .upload-area input[type="file"] { display: none; }
+    .upload-icon { font-size: 3rem; display: block; margin-bottom: 10px; }
+    .upload-text { color: #cbd5e0; font-size: 0.95rem; font-weight: 600; }
+    .upload-sub  { color: #718096; font-size: 0.8rem; margin-top: 6px; }
+    .upload-warning {
+      margin-top: 10px;
+      font-size: 0.78rem;
+      color: #f6ad55;
+      background: rgba(246, 173, 85, 0.08);
+      border: 1px solid rgba(246, 173, 85, 0.2);
+      border-radius: 8px;
+      padding: 6px 10px;
+    }
+
+    #preview-wrap {
+      display: none;
+      margin-top: 20px;
+      text-align: center;
+    }
+    #preview {
+      max-width: 100%;
+      max-height: 280px;
+      border-radius: 12px;
+      box-shadow: 0 8px 20px rgba(0,0,0,0.4);
+      border: 2px solid rgba(255,255,255,0.1);
+    }
+    .change-btn {
+      display: inline-block;
+      margin-top: 10px;
+      color: #a0aec0;
+      font-size: 0.82rem;
+      cursor: pointer;
+      text-decoration: underline;
+    }
+    .change-btn:hover { color: #fff; }
+
+    #detect-btn {
+      display: block;
+      width: 100%;
+      margin-top: 22px;
+      padding: 15px;
+      background: linear-gradient(135deg, #ec4899, #8b5cf6);
+      color: #fff;
+      border: none;
+      border-radius: 50px;
+      font-size: 1.05rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: opacity 0.2s, transform 0.1s;
+      letter-spacing: 0.5px;
+    }
+    #detect-btn:hover:not(:disabled) { opacity: 0.9; transform: translateY(-1px); }
+    #detect-btn:disabled { opacity: 0.4; cursor: not-allowed; transform: none; }
+
+    .spinner {
+      display: inline-block;
+      width: 18px; height: 18px;
+      border: 3px solid rgba(255,255,255,0.3);
+      border-top-color: #fff;
+      border-radius: 50%;
+      animation: spin 0.7s linear infinite;
+      vertical-align: middle;
+      margin-right: 8px;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    #error-msg {
+      display: none;
+      margin-top: 14px;
+      padding: 12px 16px;
+      background: rgba(254, 100, 100, 0.1);
+      border: 1px solid rgba(254, 100, 100, 0.3);
+      border-radius: 10px;
+      color: #fc8181;
+      font-size: 0.9rem;
+    }
+
+    /* ── Normal result card ── */
+    #result-card {
+      display: none;
+      margin-top: 24px;
+      padding: 24px;
+      background: rgba(255,255,255,0.05);
+      border: 1px solid rgba(255,255,255,0.1);
+      border-radius: 16px;
+      animation: fadeIn 0.4s ease;
+    }
+
+    /* ── Unknown flower result card ── */
+    #unknown-card {
+      display: none;
+      margin-top: 24px;
+      padding: 24px;
+      background: rgba(245, 158, 11, 0.08);
+      border: 2px solid rgba(245, 158, 11, 0.4);
+      border-radius: 16px;
+      animation: fadeIn 0.4s ease;
+      text-align: center;
+    }
+    .unknown-icon { font-size: 3rem; margin-bottom: 12px; }
+    .unknown-title {
+      font-size: 1.3rem;
+      font-weight: 700;
+      color: #f6ad55;
+      margin-bottom: 8px;
+    }
+    .unknown-desc {
+      color: #a0aec0;
+      font-size: 0.88rem;
+      line-height: 1.6;
+      margin-bottom: 16px;
+    }
+    .unknown-flowers {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      justify-content: center;
+      margin-top: 12px;
+    }
+    .flower-tag {
+      background: rgba(255,255,255,0.07);
+      border: 1px solid rgba(255,255,255,0.12);
+      color: #e2e8f0;
+      border-radius: 20px;
+      padding: 4px 12px;
+      font-size: 0.78rem;
+    }
+
+    @keyframes fadeIn { from { opacity:0; transform:translateY(8px); } to { opacity:1; transform:none; } }
+
+    .result-top {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      margin-bottom: 18px;
+    }
+    .result-emoji { font-size: 3rem; }
+    .result-name  { font-size: 1.55rem; font-weight: 700; color: #fff; }
+    .result-conf  { font-size: 0.88rem; color: #a0aec0; margin-top: 4px; }
+    .result-conf span { color: #68d391; font-weight: 600; }
+
+    .bars-title {
+      font-size: 0.8rem;
+      color: #718096;
+      text-transform: uppercase;
+      letter-spacing: 0.8px;
+      margin-bottom: 12px;
+    }
+    .bar-row { margin-bottom: 10px; }
+    .bar-header {
+      display: flex;
+      justify-content: space-between;
+      font-size: 0.83rem;
+      color: #cbd5e0;
+      margin-bottom: 4px;
+    }
+    .bar-header.is-top { color: #fff; font-weight: 600; }
+    .bar-track {
+      background: rgba(255,255,255,0.07);
+      border-radius: 6px;
+      height: 8px;
+      overflow: hidden;
+    }
+    .bar-fill {
+      height: 100%;
+      border-radius: 6px;
+      background: linear-gradient(90deg, #ec4899, #8b5cf6);
+      transition: width 0.6s cubic-bezier(.4,0,.2,1);
+    }
+    .bar-fill.dim { background: rgba(160, 174, 192, 0.4); }
+
+    .flowers-footer {
+      margin-top: 22px;
+      text-align: center;
+      color: #4a5568;
+      font-size: 0.78rem;
+    }
+    .flowers-footer span { margin: 0 3px; }
+  </style>
+</head>
+<body>
+
+<header>
+  <h1>🌸 Tropical Flower Detector</h1>
+  <p>Upload a flower photo — AI will identify it instantly</p>
+  <div class="badge">BYOL · EfficientNet-B3 · 7 Tropical Classes</div>
+</header>
+
+<div class="card">
+
+  <div class="upload-area" id="upload-area"
+       onclick="document.getElementById('file-input').click()"
+       ondragover="onDragOver(event)"
+       ondragleave="onDragLeave(event)"
+       ondrop="onDrop(event)">
+    <input type="file" id="file-input" accept="image/jpeg,image/png,image/webp"
+           onchange="onFileSelect(event)" />
+    <span class="upload-icon">📷</span>
+    <p class="upload-text">Click a single photo to upload or drag a single photo</p>
+    <p class="upload-sub">JPEG · PNG · WEBP &nbsp;|&nbsp; Max 10 MB</p>
+    <p class="upload-warning">⚠️ Please upload ONE flower photo only for best results</p>
+  </div>
+
+  <div id="preview-wrap">
+    <img id="preview" alt="Selected flower" />
+    <br>
+    <span class="change-btn"
+          onclick="document.getElementById('file-input').click()">
+      ← Choose a different photo
+    </span>
+  </div>
+
+  <button id="detect-btn" onclick="runDetection()" disabled>
+    Detect Flower 🌺
+  </button>
+
+  <div id="error-msg"></div>
+
+  <!-- Normal result -->
+  <div id="result-card">
+    <div class="result-top">
+      <span class="result-emoji" id="res-emoji"></span>
+      <div>
+        <div class="result-name" id="res-name"></div>
+        <div class="result-conf">Confidence: <span id="res-conf"></span></div>
+      </div>
+    </div>
+    <div class="bars-title">All class probabilities</div>
+    <div id="bars-container"></div>
+  </div>
+
+  <!-- Unknown flower result -->
+  <div id="unknown-card">
+    <div class="unknown-icon">🤷</div>
+    <div class="unknown-title">This is not one of the 7 supported flowers!</div>
+    <div class="unknown-desc">
+      The uploaded photo does not match any of the 7 tropical flowers
+      this model was trained on. Please try one of these flowers:
+    </div>
+    <div class="unknown-flowers">
+      <span class="flower-tag">🌺 Bougainvillea</span>
+      <span class="flower-tag">🌿 Crown of thorns</span>
+      <span class="flower-tag">🌸 Hibiscus</span>
+      <span class="flower-tag">🌼 Jungle geranium</span>
+      <span class="flower-tag">💜 Madagascar periwinkle</span>
+      <span class="flower-tag">🟡 Marigold</span>
+      <span class="flower-tag">🌹 Rose</span>
+    </div>
+  </div>
+
+  <div class="flowers-footer">
+    Detects:
+    <span>🌺 Bougainvillea</span>·
+    <span>🌿 Crown of thorns</span>·
+    <span>🌸 Hibiscus</span>·
+    <span>🌼 Jungle geranium</span>·
+    <span>💜 Madagascar periwinkle</span>·
+    <span>🟡 Marigold</span>·
+    <span>🌹 Rose</span>
+  </div>
+
+</div>
+
+<script>
+  let selectedFile = null;
+
+  // Confidence threshold — if below this, show "unknown flower" message
+  // 60% means: if model is less than 60% sure, it's probably not one of the 7 flowers
+  const CONFIDENCE_THRESHOLD = 60.0;
+
+  function onDragOver(e) {
+    e.preventDefault();
+    document.getElementById('upload-area').classList.add('dragover');
+  }
+  function onDragLeave(e) {
+    document.getElementById('upload-area').classList.remove('dragover');
+  }
+  function onDrop(e) {
+    e.preventDefault();
+    document.getElementById('upload-area').classList.remove('dragover');
+    const file = e.dataTransfer.files[0];
+    if (file) handleFile(file);
+  }
+
+  function onFileSelect(e) {
+    const file = e.target.files[0];
+    if (file) handleFile(file);
+  }
+
+  function handleFile(file) {
+    const allowed = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
+    if (!allowed.includes(file.type)) {
+      showError('Please upload a JPEG, PNG, or WEBP image.');
+      return;
+    }
+    if (file.size > 10 * 1024 * 1024) {
+      showError('Image is too large. Please use an image under 10 MB.');
+      return;
+    }
+
+    selectedFile = file;
+    clearError();
+    hideAllResults();
+
+    const reader = new FileReader();
+    reader.onload = ev => {
+      document.getElementById('preview').src = ev.target.result;
+      document.getElementById('preview-wrap').style.display = 'block';
+    };
+    reader.readAsDataURL(file);
+
+    document.getElementById('detect-btn').disabled = false;
+  }
+
+  async function runDetection() {
+    if (!selectedFile) return;
+
+    const btn = document.getElementById('detect-btn');
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner"></span>Detecting…';
+    clearError();
+    hideAllResults();
+
+    try {
+      const formData = new FormData();
+      formData.append('file', selectedFile);
+
+      const res = await fetch('/predict', { method: 'POST', body: formData });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err.detail || `Server error (${res.status})`);
+      }
+      const data = await res.json();
+
+      // ── Key check: if confidence is below threshold → unknown flower ──
+      if (!data.is_flower) {
+        showUnknown();
+      } else {
+        showResult(data);
+      }
+
+    } catch (err) {
+      showError('❌ ' + err.message);
+    } finally {
+      btn.disabled = false;
+      btn.innerHTML = 'Detect Flower 🌺';
+    }
+  }
+
+  function showResult(data) {
+    document.getElementById('res-emoji').textContent = data.emoji || '🌸';
+    document.getElementById('res-name').textContent  = data.class;
+    document.getElementById('res-conf').textContent  = data.confidence + '%';
+
+    const sorted = Object.entries(data.all_scores)
+      .sort((a, b) => b[1] - a[1]);
+
+    const container = document.getElementById('bars-container');
+    container.innerHTML = '';
+    sorted.forEach(([cls, score], idx) => {
+      const isTop = idx === 0;
+      container.innerHTML += `
+        <div class="bar-row">
+          <div class="bar-header ${isTop ? 'is-top' : ''}">
+            <span>${cls}</span>
+            <span>${score}%</span>
+          </div>
+          <div class="bar-track">
+            <div class="bar-fill ${isTop ? '' : 'dim'}"
+                 style="width: 0%"
+                 data-target="${score}"></div>
+          </div>
+        </div>`;
+    });
+
+    document.getElementById('result-card').style.display = 'block';
+
+    requestAnimationFrame(() => {
+      document.querySelectorAll('.bar-fill').forEach(bar => {
+        bar.style.width = bar.dataset.target + '%';
+      });
+    });
+  }
+
+  function showUnknown() {
+    document.getElementById('unknown-card').style.display = 'block';
+  }
+
+  function hideAllResults() {
+    document.getElementById('result-card').style.display = 'none';
+    document.getElementById('unknown-card').style.display = 'none';
+  }
+
+  function showError(msg) {
+    const el = document.getElementById('error-msg');
+    el.textContent = msg;
+    el.style.display = 'block';
+  }
+  function clearError() {
+    const el = document.getElementById('error-msg');
+    el.style.display = 'none';
+    el.textContent = '';
+  }
+</script>
+</body>
+</html>
